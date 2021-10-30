@@ -7,8 +7,16 @@ const titanic = document.querySelector("#titanic")
 // display flex, justifyContent center, alignItems flex-end
 titanic.style.display = "grid"
 // Change the number of columns on the titanic to 34
-titanic.style.gridTemplateColumns = "repeat(34, 60px)"
+titanic.style.gridTemplateColumns = "repeat(auto-fill, 60px)"
+titanic.style.gridAutoRows = "60px"
 titanic.style.gridGap = "1px"
+titanic.style.width = "calc(100% - 64px)"
+titanic.style.justifyContent = "center"
+
+document.body.style.display = "flex"
+document.body.style.justifyContent = "center"
+document.body.style.alignItems = "center"
+document.body.style.paddingTop = "64px"
 
 // Map over the data and make a new element for each passenger
 const passengers = data.map((p) => {
@@ -25,6 +33,7 @@ passengers.forEach((p, i) => {
   p.style.width = "10px"
   p.style.height = "10px"
   p.style.backgroundColor = "#000"
+  p.style.margin = "auto"
 })
 
 // Challenges -
@@ -38,14 +47,18 @@ passengers.forEach((p) => {
   p.style.height = "25px"
 })
 
-const normalizedData = data
-  .sort((a, b) => a.fields.fare < b.fields.fare)
-  .filter((passenger) => !isNaN(passenger.fields.fare) && passenger.fields.fare !== -1)
+const normalizedData = data.sort((a, b) => {
+  if (isNaN(a.fields.fare)) {
+    return 1
+  } else if (isNaN(b.fields.fare)) {
+    return -1
+  }
+  return b.fields.fare - a.fields.fare
+})
 
-const maxFare = normalizedData.reduce(
-  (maxFare, passenger) => (maxFare = Math.max(maxFare, passenger.fields.fare)),
-  -Infinity
-)
+const maxFare = normalizedData
+  .filter((passenger) => !isNaN(passenger.fields.fare) && passenger.fields.fare !== -1)
+  .reduce((maxFare, passenger) => (maxFare = Math.max(maxFare, passenger.fields.fare)), -Infinity)
 
 console.log(maxFare)
 
@@ -77,5 +90,5 @@ passengers.forEach((p, i) => {
   }
 
   // fare
-  p.style.transform = `scale(${data[i].fields.fare / maxFare + 0.6})`
+  p.style.transform = `scale(${normalizedData[i].fields.fare / maxFare + 0.6})`
 })
