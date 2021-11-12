@@ -6,7 +6,11 @@ let isListening = false
 
 let stream
 let analyser
+let audioSource
 let frequencyData
+
+let startTime
+let timestamps = []
 
 async function requestStartAudio() {
   if (!micAllowed) {
@@ -34,53 +38,54 @@ function startAudio() {
 
   // create analyser
   analyser = audioCtx.createAnalyser()
-  analyser.fftSize = 256
+  analyser.fftSize = 1024
 
-  // create audio source
-  // audio.src = "bird-whistling-a.wav"
-  // audio.src = "sacred-song.mp3"
-  // const source = audioCtx.createMediaElementSource(audio)
-  const source = audioCtx.createMediaStreamSource(stream)
+  audioSource = audioCtx.createMediaStreamSource(stream)
 
-  source.connect(analyser)
+  audioSource.connect(analyser)
   analyser.connect(audioCtx.destination)
 
   // get array of frequency data
   frequencyData = new Uint8Array(analyser.frequencyBinCount)
 
-  // start playing
-  audio.play()
   requestAnimationFrame(render)
 }
 
-function render() {
+function render(timestamp) {
   const centerX = canvas.width / 2
   const centerY = canvas.height / 2
   const radius = canvas.width * 0.25
+
+  if (startTime == null) {
+    startTime = timestamp
+  }
+  const deltaTime = timestamp - startTime
 
   analyser.getByteFrequencyData(frequencyData)
 
   ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-  ringRenderer(frequencyData, ctx, centerX, centerY, radius)
+  canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
 
   requestAnimationFrame(render)
 }
 
-function ringRenderer(frequencyData, ctx, centerX, centerY, radius) {
+function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime) {
+  // Outer Rings
   const barWidth = 2.5
   const barHeight = 2.5
 
   ctx.lineWidth = barWidth
 
-  const numberOfBars = frequencyData.length
+  const numberOfBars = frequencyData.length / 2
   const barStep = (2 * Math.PI) / numberOfBars
-  const freqStep = Math.floor(frequencyData.length / numberOfBars)
 
   ctx.beginPath()
 
-  for (let index = 0; index < frequencyData.length; index += freqStep) {
-    const amplitude = (frequencyData[index] / 6 + barHeight) / 2
+  for (let index = 0; index < numberOfBars; index += 1) {
+    const value = frequencyData[index]
+    const adjustedValue = value / 3
+    const amplitude = (adjustedValue + barHeight) / 2
 
     const x1 = centerX + (radius - amplitude) * Math.cos(barStep * index)
     const y1 = centerY + (radius - amplitude) * Math.sin(barStep * index)
@@ -92,4 +97,49 @@ function ringRenderer(frequencyData, ctx, centerX, centerY, radius) {
   }
 
   ctx.stroke()
+
+  // Needle
+  const secondsInterval = 30000
+  const normalizedTime = deltaTime % secondsInterval
+  const needleStep = (2 * Math.PI) / secondsInterval
+
+  const decibelLevel = getDecibelLevel(frequencyData)
+  const maxDecibelLevel = 50
+  const normalizedDecibelLevel = Math.min(decibelLevel / maxDecibelLevel, 1)
+  const needleTopMargin = 20
+  const needleHeight = radius * normalizedDecibelLevel - needleTopMargin
+
+  const x = centerX + needleHeight * Math.cos(needleStep * normalizedTime)
+  const y = centerY + needleHeight * Math.sin(needleStep * normalizedTime)
+
+  ctx.moveTo(centerX, centerY)
+  ctx.lineTo(x, y)
+  ctx.stroke()
+
+  // Radar Graph
+  // timestamps.push({ deltaTime, decibelLevel })
+  // const lastIndex = timestamps.length - 1
+  // while (timestamps[lastIndex].deltaTime - timestamps[0].deltaTime > secondsInterval) {
+  //   timestamps.shift()
+  // }
+  // timestamps.forEach((timestamp, index) => {
+  //   const normalizedIndex = index / timestamps.length
+  //   const x = centerX + radius * Math.cos(needleStep * timestamp.deltaTime)
+  //   const y = centerY + radius * Math.sin(needleStep * timestamp.deltaTime)
+  //   ctx.fillRect(x, y, 1, 1)
+  // })
+}
+
+// Source: https://github.com/apm1467/html5-mic-visualizer/blob/bb146b117f1bf8c5b0850cb3db942b6d3ae8d209/js/index.js#L54-L62
+// Explanation: https://stackoverflow.com/a/38983553/7897036
+function getDecibelLevel(frequencyData) {
+  let total = 0
+  frequencyData.forEach((value) => {
+    total += value * value
+  })
+
+  const rms = Math.sqrt(total / frequencyData.length)
+  const decibel = 20 * Math.log10(rms)
+
+  return Math.max(decibel, 0) // sanity check
 }
