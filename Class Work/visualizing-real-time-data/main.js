@@ -79,9 +79,9 @@ function render() {
   // radialRayRenderer(frequencyArray, ctx, centerX, centerY, radius)
   // verticalBarsMonoRenderer(frequencyArray, ctx, 12, 300, 300)
   // verticalBarsRenderer(frequencyArray, ctx, 300, 300)
-  circleCenterRenderer(frequencyArray, ctx, centerX, centerY)
+  // circleCenterRenderer(frequencyArray, ctx, centerX, centerY)
   // circleGridRenderer(frequencyArray, ctx, 300, 300)
-  // circleRenderer(frequencyArray, ctx, centerX, centerY, radius)
+  circleRenderer(frequencyArray, ctx, centerX, centerY, radius)
 
   // Set up the next animation frame
   requestAnimationFrame(render)
