@@ -1,4 +1,4 @@
-const canvas = document.getElementById("renderer")
+const canvas = document.querySelector("canvas")
 const ctx = canvas.getContext("2d")
 
 let requestedStream = false
@@ -6,7 +6,6 @@ let isListening = false
 
 let stream
 let analyser
-let audioSource
 let frequencyData
 
 let startTime
@@ -32,19 +31,19 @@ async function requestStartAudio() {
 }
 
 function startAudio() {
-  const audio = new Audio()
-
-  // get context
+  // create nodes
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  const audioSource = audioCtx.createMediaStreamSource(stream)
+  const processor = audioCtx.createScriptProcessor(2048, 1, 1)
 
   // create analyser
   analyser = audioCtx.createAnalyser()
   analyser.fftSize = 1024
 
-  audioSource = audioCtx.createMediaStreamSource(stream)
-
+  // connect nodes
   audioSource.connect(analyser)
   analyser.connect(audioCtx.destination)
+  processor.connect(audioCtx.destination)
 
   // get array of frequency data
   frequencyData = new Uint8Array(analyser.frequencyBinCount)
@@ -105,7 +104,7 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
   const needleStep = (2 * Math.PI) / secondsInterval
 
   const decibelLevel = getDecibelLevel(frequencyData)
-  const maxDecibelLevel = 50
+  const maxDecibelLevel = 80
   const normalizedDecibelLevel = Math.min(decibelLevel / maxDecibelLevel, 1)
   const needleTopMargin = 20
   const needleHeight = radius * normalizedDecibelLevel - needleTopMargin
@@ -113,7 +112,6 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
   const x = centerX + needleHeight * Math.cos(needleStep * normalizedTime)
   const y = centerY + needleHeight * Math.sin(needleStep * normalizedTime)
 
-  console.log(normalizedTime)
   ctx.moveTo(centerX, centerY)
   ctx.lineTo(x, y)
   ctx.stroke()
@@ -122,8 +120,6 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
   timestamps.push({ deltaTime, decibelLevel })
   let lastIndex = timestamps.length - 1
   while (timestamps[lastIndex].deltaTime - timestamps[0].deltaTime > secondsInterval) {
-    // console.log(timestamps)
-    // console.log(timestamps[lastIndex].deltaTime - timestamps[0].deltaTime)
     timestamps.shift()
     lastIndex = timestamps.length - 1
   }
@@ -140,6 +136,8 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
     ctx.lineTo(x2, y2)
   })
   ctx.stroke()
+
+  console.log(decibelLevel)
 }
 
 // Source: https://github.com/apm1467/html5-mic-visualizer/blob/bb146b117f1bf8c5b0850cb3db942b6d3ae8d209/js/index.js#L54-L62
@@ -151,7 +149,8 @@ function getDecibelLevel(frequencyData) {
   })
 
   const rms = Math.sqrt(total / frequencyData.length)
-  const decibel = 20 * Math.log10(rms)
+  const offset = 20
+  const decibel = 20 * Math.log10(rms) + offset
 
   return Math.max(decibel, 0) // sanity check
 }
