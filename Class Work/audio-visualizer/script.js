@@ -1,7 +1,7 @@
 const canvas = document.getElementById("renderer")
 const ctx = canvas.getContext("2d")
 
-let micAllowed = false
+let requestedStream = false
 let isListening = false
 
 let stream
@@ -13,20 +13,21 @@ let startTime
 let timestamps = []
 
 async function requestStartAudio() {
-  if (!micAllowed) {
+  if (!requestedStream) {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      isListening = true
-      startAudio()
+
+      requestedStream = true
+      isListening = !isListening
+      if (isListening) startAudio()
     } catch (err) {
       alert("Microphone permissions denied!")
     }
-  } else if (isListening) {
-    isListening = false
+  } else {
+    isListening = !isListening
+    if (isListening) startAudio()
+    // isListening = false
     // TODO: stop
-  } else if (!isListening) {
-    isListening = true
-    startAudio()
   }
 }
 
@@ -112,22 +113,33 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
   const x = centerX + needleHeight * Math.cos(needleStep * normalizedTime)
   const y = centerY + needleHeight * Math.sin(needleStep * normalizedTime)
 
+  console.log(normalizedTime)
   ctx.moveTo(centerX, centerY)
   ctx.lineTo(x, y)
   ctx.stroke()
 
   // Radar Graph
-  // timestamps.push({ deltaTime, decibelLevel })
-  // const lastIndex = timestamps.length - 1
-  // while (timestamps[lastIndex].deltaTime - timestamps[0].deltaTime > secondsInterval) {
-  //   timestamps.shift()
-  // }
-  // timestamps.forEach((timestamp, index) => {
-  //   const normalizedIndex = index / timestamps.length
-  //   const x = centerX + radius * Math.cos(needleStep * timestamp.deltaTime)
-  //   const y = centerY + radius * Math.sin(needleStep * timestamp.deltaTime)
-  //   ctx.fillRect(x, y, 1, 1)
-  // })
+  timestamps.push({ deltaTime, decibelLevel })
+  let lastIndex = timestamps.length - 1
+  while (timestamps[lastIndex].deltaTime - timestamps[0].deltaTime > secondsInterval) {
+    // console.log(timestamps)
+    // console.log(timestamps[lastIndex].deltaTime - timestamps[0].deltaTime)
+    timestamps.shift()
+    lastIndex = timestamps.length - 1
+  }
+
+  timestamps.forEach((timestamp, index) => {
+    const normalizedTime = timestamp.deltaTime % secondsInterval
+    const normalizedDecibelLevel = Math.min(timestamp.decibelLevel / maxDecibelLevel, 1)
+    const height = radius * normalizedDecibelLevel - needleTopMargin
+
+    const x2 = centerX + height * Math.cos(needleStep * normalizedTime)
+    const y2 = centerY + height * Math.sin(needleStep * normalizedTime)
+
+    ctx.moveTo(centerX, centerY)
+    ctx.lineTo(x2, y2)
+  })
+  ctx.stroke()
 }
 
 // Source: https://github.com/apm1467/html5-mic-visualizer/blob/bb146b117f1bf8c5b0850cb3db942b6d3ae8d209/js/index.js#L54-L62
