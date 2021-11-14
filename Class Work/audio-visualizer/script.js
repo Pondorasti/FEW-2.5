@@ -11,6 +11,16 @@ let frequencyData
 let startTime
 let timestamps = []
 
+const barWidth = 2.5
+const barHeight = 2.5
+const secondsInterval = 30000
+const needleStep = (2 * Math.PI) / secondsInterval
+const maxDecibelLevel = 80
+const needleTopMargin = 60
+
+const translucentStrokeStyle = "rgba(255, 255, 255, 0.75)"
+const backgroundStrokeStyle = "rgba(255, 255, 255, 0.10)"
+
 async function requestStartAudio() {
   if (!requestedStream) {
     try {
@@ -34,7 +44,6 @@ function startAudio() {
   // create nodes
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
   const audioSource = audioCtx.createMediaStreamSource(stream)
-  const processor = audioCtx.createScriptProcessor(2048, 1, 1)
 
   // create analyser
   analyser = audioCtx.createAnalyser()
@@ -43,7 +52,6 @@ function startAudio() {
   // connect nodes
   audioSource.connect(analyser)
   analyser.connect(audioCtx.destination)
-  processor.connect(audioCtx.destination)
 
   // get array of frequency data
   frequencyData = new Uint8Array(analyser.frequencyBinCount)
@@ -72,15 +80,12 @@ function render(timestamp) {
 
 function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime) {
   // Outer Rings
-  const barWidth = 2.5
-  const barHeight = 2.5
-
-  ctx.lineWidth = barWidth
-
   const numberOfBars = frequencyData.length / 2
   const barStep = (2 * Math.PI) / numberOfBars
 
   ctx.beginPath()
+  ctx.lineWidth = barWidth
+  ctx.strokeStyle = translucentStrokeStyle
 
   for (let index = 0; index < numberOfBars; index += 1) {
     const value = frequencyData[index]
@@ -95,28 +100,31 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
     ctx.moveTo(x1, y1)
     ctx.lineTo(x2, y2)
   }
+  ctx.stroke()
+
+  // Radar - Background
+  const maxNeedleHeight = radius - needleTopMargin
+  const beckgroundNeedleStep = (2 * Math.PI) / 8
+
+  ctx.beginPath()
+  ctx.strokeStyle = backgroundStrokeStyle
+
+  ctx.arc(centerX, centerY, maxNeedleHeight, 0, 2 * Math.PI)
+  ctx.arc(centerX, centerY, maxNeedleHeight * 0.66, 0, 2 * Math.PI)
+  ctx.arc(centerX, centerY, maxNeedleHeight * 0.33, 0, 2 * Math.PI)
+
+  for (let index = 0; index < 8; index += 1) {
+    const endX = centerX + maxNeedleHeight * Math.cos(beckgroundNeedleStep * index)
+    const endY = centerY + maxNeedleHeight * Math.sin(beckgroundNeedleStep * index)
+
+    ctx.moveTo(centerX, centerY)
+    ctx.lineTo(endX, endY)
+  }
 
   ctx.stroke()
 
-  // Needle
-  const secondsInterval = 30000
-  const normalizedTime = deltaTime % secondsInterval
-  const needleStep = (2 * Math.PI) / secondsInterval
-
+  // Radar - Graph
   const decibelLevel = getDecibelLevel(frequencyData)
-  const maxDecibelLevel = 80
-  const normalizedDecibelLevel = Math.min(decibelLevel / maxDecibelLevel, 1)
-  const needleTopMargin = 20
-  const needleHeight = radius * normalizedDecibelLevel - needleTopMargin
-
-  const x = centerX + needleHeight * Math.cos(needleStep * normalizedTime)
-  const y = centerY + needleHeight * Math.sin(needleStep * normalizedTime)
-
-  ctx.moveTo(centerX, centerY)
-  ctx.lineTo(x, y)
-  ctx.stroke()
-
-  // Radar Graph
   timestamps.push({ deltaTime, decibelLevel })
   let lastIndex = timestamps.length - 1
   while (timestamps[lastIndex].deltaTime - timestamps[0].deltaTime > secondsInterval) {
@@ -124,20 +132,48 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
     lastIndex = timestamps.length - 1
   }
 
+  ctx.beginPath()
   timestamps.forEach((timestamp, index) => {
     const normalizedTime = timestamp.deltaTime % secondsInterval
     const normalizedDecibelLevel = Math.min(timestamp.decibelLevel / maxDecibelLevel, 1)
     const height = radius * normalizedDecibelLevel - needleTopMargin
 
-    const x2 = centerX + height * Math.cos(needleStep * normalizedTime)
-    const y2 = centerY + height * Math.sin(needleStep * normalizedTime)
+    const endX = centerX + height * Math.cos(needleStep * normalizedTime)
+    const endY = centerY + height * Math.sin(needleStep * normalizedTime)
 
     ctx.moveTo(centerX, centerY)
-    ctx.lineTo(x2, y2)
+    ctx.lineTo(endX, endY)
   })
+
+  // Radar - Radial Gradient
+  const normalizedTime = deltaTime % secondsInterval
+  const needleOffset = 0.016 // TODO: calculate offset based on needle width and timestamp.deltaTime
+  const startAngle = (normalizedTime / secondsInterval) * 2 * Math.PI - needleOffset
+  const endAngle = 2 * Math.PI + startAngle
+
+  const gradient = ctx.createConicalGradient(centerX, centerY, startAngle, endAngle)
+
+  gradient.addColorStop(1, "rgba(255, 255, 255, 0.75)")
+  gradient.addColorStop(0, "rgba(255, 255, 255, 0)")
+
+  ctx.strokeStyle = gradient.pattern
   ctx.stroke()
 
-  console.log(decibelLevel)
+  // Rader - Needle
+  const normalizedDecibelLevel = Math.min(decibelLevel / maxDecibelLevel, 1)
+  const needleHeight = radius * normalizedDecibelLevel - needleTopMargin
+
+  const x = centerX + needleHeight * Math.cos(needleStep * normalizedTime)
+  const y = centerY + needleHeight * Math.sin(needleStep * normalizedTime)
+
+  ctx.beginPath()
+  ctx.strokeStyle = translucentStrokeStyle
+  ctx.lineWidth = barWidth
+  ctx.lineCap = "round"
+
+  ctx.moveTo(centerX, centerY)
+  ctx.lineTo(x, y)
+  ctx.stroke()
 }
 
 // Source: https://github.com/apm1467/html5-mic-visualizer/blob/bb146b117f1bf8c5b0850cb3db942b6d3ae8d209/js/index.js#L54-L62
