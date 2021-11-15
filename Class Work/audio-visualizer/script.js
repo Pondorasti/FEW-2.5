@@ -1,3 +1,4 @@
+const buttonContainer = document.getElementById("button-container")
 const canvas = document.querySelector("canvas")
 const ctx = canvas.getContext("2d")
 
@@ -47,7 +48,7 @@ function startAudio() {
 
   // create analyser
   analyser = audioCtx.createAnalyser()
-  analyser.fftSize = 1024
+  analyser.fftSize = 512
 
   // connect nodes
   audioSource.connect(analyser)
@@ -56,6 +57,7 @@ function startAudio() {
   // get array of frequency data
   frequencyData = new Uint8Array(analyser.frequencyBinCount)
 
+  buttonContainer.style.display = "none"
   requestAnimationFrame(render)
 }
 
@@ -133,6 +135,7 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
   }
 
   ctx.beginPath()
+  ctx.lineWidth = barWidth
   timestamps.forEach((timestamp, index) => {
     const normalizedTime = timestamp.deltaTime % secondsInterval
     const normalizedDecibelLevel = Math.min(timestamp.decibelLevel / maxDecibelLevel, 1)
@@ -156,7 +159,8 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
   gradient.addColorStop(1, "rgba(255, 255, 255, 0.75)")
   gradient.addColorStop(0, "rgba(255, 255, 255, 0)")
 
-  ctx.strokeStyle = gradient.pattern
+  // ctx.strokeStyle = gradient.pattern
+  ctx.strokeStyle = translucentStrokeStyle
   ctx.stroke()
 
   // Rader - Needle
@@ -168,7 +172,7 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
 
   ctx.beginPath()
   ctx.strokeStyle = translucentStrokeStyle
-  ctx.lineWidth = barWidth
+  ctx.lineWidth = barWidth * 2
   ctx.lineCap = "round"
 
   ctx.moveTo(centerX, centerY)
