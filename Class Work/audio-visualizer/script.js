@@ -12,15 +12,20 @@ let frequencyData
 let startTime
 let timestamps = []
 
+const fftSize = 512
+const centerX = canvas.width / 2
+const centerY = canvas.height / 2
+const radius = canvas.width * 0.4
 const barWidth = 2.5
 const barHeight = 2.5
 const secondsInterval = 30000
 const needleStep = (2 * Math.PI) / secondsInterval
 const maxDecibelLevel = 80
-const needleTopMargin = 60
+const needleTopMargin = canvas.width * 0.1
 
-const translucentStrokeStyle = "rgba(255, 255, 255, 0.75)"
-const backgroundStrokeStyle = "rgba(255, 255, 255, 0.10)"
+const transparentStyle = "rgba(255, 255, 255, 0)"
+const translucentStyle = "rgba(255, 255, 255, 0.75)"
+const backgroundStyle = "rgba(255, 255, 255, 0.10)"
 
 async function requestStartAudio() {
   if (!requestedStream) {
@@ -48,7 +53,7 @@ function startAudio() {
 
   // create analyser
   analyser = audioCtx.createAnalyser()
-  analyser.fftSize = 512
+  analyser.fftSize = fftSize
 
   // connect nodes
   audioSource.connect(analyser)
@@ -62,10 +67,6 @@ function startAudio() {
 }
 
 function render(timestamp) {
-  const centerX = canvas.width / 2
-  const centerY = canvas.height / 2
-  const radius = canvas.width * 0.25
-
   if (startTime == null) {
     startTime = timestamp
   }
@@ -87,7 +88,7 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
 
   ctx.beginPath()
   ctx.lineWidth = barWidth
-  ctx.strokeStyle = translucentStrokeStyle
+  ctx.strokeStyle = translucentStyle
 
   for (let index = 0; index < numberOfBars; index += 1) {
     const value = frequencyData[index]
@@ -109,7 +110,7 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
   const beckgroundNeedleStep = (2 * Math.PI) / 8
 
   ctx.beginPath()
-  ctx.strokeStyle = backgroundStrokeStyle
+  ctx.strokeStyle = backgroundStyle
 
   ctx.arc(centerX, centerY, maxNeedleHeight, 0, 2 * Math.PI)
   ctx.arc(centerX, centerY, maxNeedleHeight * 0.66, 0, 2 * Math.PI)
@@ -156,11 +157,11 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
 
   const gradient = ctx.createConicalGradient(centerX, centerY, startAngle, endAngle)
 
-  gradient.addColorStop(1, "rgba(255, 255, 255, 0.75)")
-  gradient.addColorStop(0, "rgba(255, 255, 255, 0)")
+  gradient.addColorStop(1, translucentStyle)
+  gradient.addColorStop(0, transparentStyle)
 
-  // ctx.strokeStyle = gradient.pattern
-  ctx.strokeStyle = translucentStrokeStyle
+  ctx.strokeStyle = gradient.pattern
+  // ctx.strokeStyle = translucentStrokeStyle
   ctx.stroke()
 
   // Rader - Needle
@@ -171,13 +172,13 @@ function canvasRenderer(frequencyData, ctx, centerX, centerY, radius, deltaTime)
   const y = centerY + needleHeight * Math.sin(needleStep * normalizedTime)
 
   ctx.beginPath()
-  ctx.strokeStyle = translucentStrokeStyle
-  ctx.lineWidth = barWidth * 2
+  ctx.strokeStyle = translucentStyle
+  ctx.lineWidth = barWidth
   ctx.lineCap = "round"
 
   ctx.moveTo(centerX, centerY)
   ctx.lineTo(x, y)
-  ctx.stroke()
+  // ctx.stroke()
 }
 
 // Source: https://github.com/apm1467/html5-mic-visualizer/blob/bb146b117f1bf8c5b0850cb3db942b6d3ae8d209/js/index.js#L54-L62
