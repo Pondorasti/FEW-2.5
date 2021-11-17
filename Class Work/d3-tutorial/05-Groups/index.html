@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <svg id="svg" width="800" height="500"></svg>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    d3.csv("cities.csv").then(data => {
+
+      // const minX = d3.min(data, d => parseFloat(d.x))
+      // const maxX = d3.max(data, d => parseFloat(d.x))
+
+      // const minY = d3.min(data, d => parseFloat(d.y))
+      // const maxY = d3.max(data, d => parseFloat(d.y))
+
+      const xExtent = d3.extent(data, d => parseFloat(d.x))
+      const xScale = d3.scaleLinear()
+        .domain(xExtent)
+        .range([200, 700])
+
+      const yExtent = d3.extent(data, d => parseFloat(d.y))
+      const yScale = d3.scaleLinear()
+        .domain(yExtent)
+        .range([200, 400])
+
+      const countries = Array.from(new Set(data.map(d => d.country)))
+      const countryScale = d3.scaleOrdinal()
+        .domain(countries)
+        .range(['cornflowerblue', 'gold', 'gold', 'tomato'])
+
+      const popExtent = d3.extent(data, d => parseInt(d.population))
+      const popScale = d3.scaleSqrt()
+        .domain(popExtent)
+        .range([10, 100])
+
+      const node = d3.select("#svg")
+        .style("border", "1px solid black")
+        .selectAll("g")
+        .data(data)
+        .enter()
+
+      const groups = node
+        .append("g")
+
+      groups
+        .append('circle')
+        .attr("cx", d => xScale(d.x))
+        .attr("cy", d => yScale(d.y))
+        .attr("r", d => popScale(d.population))
+        .attr('fill', d => countryScale(d.country))
+        .attr("opacity", 0.25)
+
+      const angle = Math.PI * 1.75
+      const padding = 20
+      groups
+        .append("text")
+        .text(d => d.label)
+        .attr("x", d => xScale(d.x) + Math.cos(angle) * popScale(d.population) + padding)
+        .attr("y", d => yScale(d.y) + Math.sin(angle) * popScale(d.population) - padding)
+        .style('font-family', 'Helvetica')
+        .style('font-size', '18px')
+
+      groups
+        .append("path")
+        .attr("d", d => {
+          const x1 = xScale(d.x)
+          const y1 = yScale(d.y)
+
+          const x2 = x1 + Math.cos(angle) * popScale(d.population) + padding - 5
+          const y2 = y1 + Math.sin(angle) * popScale(d.population) - padding + 5
+
+          const x3 = x2 + 60
+          const y3 = y2
+
+          return d3.line()([[x1, y1], [x2, y2], [x3, y3]])
+
+        })
+        .attr("stroke", "#000")
+        .attr("fill", "none")
+    });
+  </script>
+</body>
+
+</html>
