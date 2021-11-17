@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <svg id="svg" width="500" height="500"></svg>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    d3.csv("cities.csv").then(data => {
+      d3.select("#svg")
+        .style("border", "1px solid black")
+        .selectAll("circle")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("cx", d => parseFloat(d.x) * 2 + 250)
+        .attr("cy", d => parseFloat(d.y) * 2 + 250)
+        .attr("r", d => parseInt(d.population) / 100000)
+        .attr('fill', d => {
+          if (d.country === 'USA') {
+            return 'cornflowerblue'
+          } else if (d.country === 'Pakistan') {
+            return 'gold'
+          } else if (d.country === 'Italy') {
+            return 'green'
+          } else if (d.country === 'Brazil') {
+            return 'tomato'
+          }
+        })
+        .attr("opacity", 0.25)
+    });
+  </script>
+</body>
+
+</html>
