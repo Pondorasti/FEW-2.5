@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Using Paths</title>
+
+  <style>
+    body,
+    html {
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #svg {
+      border: 1px solid;
+    }
+  </style>
+</head>
+
+<body>
+
+  <svg id="svg" width="600" height="400"></svg>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    function getDataForState(data, state) {
+      const arr = data
+        .filter(d => d.state === state)
+        .filter(d => !isNaN(d.precipitation))
+        .map(d => {
+          d.precipitation = parseFloat(d.precipitation)
+          d.date = d.date
+          return d
+        })
+
+      return arr
+    }
+
+    function handleData(data) {
+      const width = 600
+      const height = 400
+      const margin = 40
+      const scatterPlotRadius = 16
+
+      const baData = getDataForState(data, "BA")
+      const parseTime = d3.timeParse("%d/%m/%Y")
+      baData.forEach(d => d.date = parseTime(d.date))
+      const dateExtent = d3.extent(baData, d => d.date)
+
+      const xScale = d3.scaleTime()
+        .domain(dateExtent)
+        .range([margin, width - margin])
+        .nice()
+
+      const precipitationExtents = d3.extent(baData, d => d.precipitation)
+      const yScale = d3.scaleLinear()
+        .domain(precipitationExtents)
+        .range([height - margin, margin])
+
+      const lineGen = d3.line()
+        .x(d => xScale(d.date))
+        .y(d => yScale(d.precipitation))
+        .curve(d3.curveLinear)
+
+      const svg = d3.select("#svg")
+
+      const graph = svg.append('g')
+      // graph
+      //   .append("path")
+      //   .attr("d", lineGen(baData))
+      //   .attr("stroke-width", 3)
+      //   .attr("stroke", "red")
+      //   .attr("fill", "none")
+
+      const bottomAxis = d3.axisBottom(xScale)
+      const leftAxis = d3.axisLeft(yScale)
+
+      svg.append("g")
+        .attr("transform", `translate(0, ${height - margin})`)
+        .call(bottomAxis)
+
+      svg.append("g")
+        .attr("transform", `translate(${margin}, 0)`)
+        .call(leftAxis)
+
+      const scatterPlotScale = d3.scaleSqrt()
+        .domain(precipitationExtents)
+        .range([1, scatterPlotRadius])
+      const colorScale = d3.scaleSequential()
+        .domain(dateExtent)
+        .interpolator(d3.interpolateInferno)
+
+      svg
+        .append("g")
+        .selectAll("circle")
+        .data(baData)
+        .enter()
+        .append("circle")
+        .attr("cx", d => xScale(d.date))
+        .attr("cy", d => yScale(d.precipitation))
+        .attr("r", d => scatterPlotScale(d.precipitation))
+        .attr("fill", d => colorScale(d.date))
+    }
+
+    d3.csv("precipitation.csv")
+      .then(handleData)
+
+  </script>
+</body>
+
+</html>
