@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Using Paths</title>
+
+  <style>
+    body,
+    html {
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #svg {
+      border: 1px solid;
+    }
+  </style>
+</head>
+
+
+<body>
+
+  <svg id="svg" width="600" height="400"></svg>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <script>
+    const obj = { "YEAR": "1901", "JAN": "17.99", "FEB": "19.43", "MAR": "23.49" }
+    function convertToArray(obj) {
+      // return Object.entries(obj)
+
+      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+      return months.map(month => {
+        const temp = parseFloat(obj[month])
+        return { month, temp }
+      })
+    }
+
+
+    async function handleData() {
+      const width = 600
+      const height = 300
+      const margin = 40
+
+      const data = await d3.csv("Weather Data in India from 1901 to 2017.csv")
+
+
+    }
+
+    handleData()
+  </script>
+
+</body>
