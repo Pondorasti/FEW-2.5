@@ -46,7 +46,43 @@
 
       const data = await d3.csv("Weather Data in India from 1901 to 2017.csv")
 
+      const year_1901 = data[0]
+      const months_1901 = convertToArray(year_1901)
 
+      const xScale = d3.scaleLinear()
+        .domain([0, months_1901.length - 1])
+        .range([margin, width - margin])
+
+      const yScale = d3.scaleLinear()
+        .domain(d3.extent(months_1901, d => d.temp))
+        .range([height - margin, margin])
+
+      const svg = d3.select("#svg")
+      const graph = svg.append("g")
+
+      const lineGen = d3.area()
+        .x((d, i) => xScale(i))
+        .y0(d => yScale(d.temp))
+        .y1(height - margin)
+        .curve(d3.curveBasis)
+
+      graph.append("path")
+        .attr("d", lineGen(months_1901))
+        .attr('fill', 'red')
+
+      const monthScale = d3.scaleTime()
+        .domain([new Date('1901-01-01'), new Date('1901-12-01')])
+        .range([margin, width - margin])
+        .nice()
+      const bottomAxis = d3.axisBottom(monthScale)
+      svg.append("g")
+        .attr("transform", `translate(0, ${height - margin})`)
+        .call(bottomAxis)
+
+      const leftAxis = d3.axisLeft(yScale)
+      svg.append("g")
+        .attr("transform", `translate(${margin}, 0)`)
+        .call(leftAxis)
     }
 
     handleData()
