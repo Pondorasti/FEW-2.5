@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Using Paths</title>
+
+  <style>
+    body,
+    html {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #svg {
+      border: 1px solid;
+    }
+
+    select {
+      font-size: 1rem;
+      margin: 1rem 0;
+      align-self: flex-end;
+    }
+  </style>
+</head>
+
+
+<body>
+
+  <svg id="svg" width="600" height="400"></svg>
+
+  <select id="dropdown">
+    <option value="0">1901</option>
+    <option value="1">1902</option>
+    <option value="2">1903</option>
+    <option value="3">1904</option>
+    <option value="4">1905</option>
+  </select>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <script>
+    const dropdownEl = document.getElementById("dropdown")
+
+    function convertToArray(obj) {
+      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+      return months.map(month => {
+        const temp = parseFloat(obj[month])
+        return { month, temp }
+      })
+    }
+
+
+    async function handleData() {
+      const width = 600
+      const height = 300
+      const margin = 40
+
+      const data = await d3.csv("Weather Data in India from 1901 to 2017.csv")
+
+      const year_1901 = data[0]
+      const months_1901 = convertToArray(year_1901)
+
+      const years = data.slice(0, 5)
+      let months = []
+      for (let i = 0; i < 5; i += 1) {
+        const year = data[i]
+        const newMonths = convertToArray(year)
+        months = months.concat(newMonths)
+      }
+
+      const xScale = d3.scaleLinear()
+        .domain([0, months_1901.length - 1])
+        .range([margin, width - margin])
+
+      console.log(months)
+      const yExtent = d3.extent(months, d => d.temp)
+      const yScale = d3.scaleLinear()
+        .domain(yExtent)
+        .range([height - margin, margin])
+
+      const svg = d3.select("#svg")
+      const graph = svg.append("g")
+
+      const lineGen = d3.area()
+        .x((d, i) => xScale(i))
+        .y0(d => yScale(d.temp))
+        .y1(height - margin)
+        .curve(d3.curveBasis)
+
+      const areaPath = graph.append("path")
+        .attr("d", lineGen(months_1901))
+        .attr('fill', 'rgba(255, 0, 0, 0.33)')
+
+      const monthScale = d3.scaleTime()
+        .domain([new Date('1901-01-01'), new Date('1901-12-01')])
+        .range([margin, width - margin])
+        .nice()
+      const bottomAxis = d3.axisBottom(monthScale)
+      svg.append("g")
+        .attr("transform", `translate(0, ${height - margin})`)
+        .call(bottomAxis)
+
+      const leftAxis = d3.axisLeft(yScale)
+      svg.append("g")
+        .attr("transform", `translate(${margin}, 0)`)
+        .call(leftAxis)
+
+      dropdownEl.addEventListener("change", (e) => {
+        const index = e.target.value
+        const hue = 360 / 12 * index
+        const fillColor = `hsla(${hue}, 100%, 50%, 0.33)`
+
+        const newDataset = convertToArray(data[index])
+        areaPath
+          .transition()
+          .duration(500)
+          // .ease(d3.easeElasticOut)
+          .attr("d", lineGen(newDataset))
+          .attr('fill', fillColor)
+      })
+    }
+
+    handleData()
+  </script>
+
+</body>
